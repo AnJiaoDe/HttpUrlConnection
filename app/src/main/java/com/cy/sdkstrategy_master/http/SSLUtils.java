@@ -23,7 +23,6 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
 /**
- * Created by YanZhenjie on 2017/6/13.
  */
 public class SSLUtils {
     private static SSLSocketFactory trustAllSSlSocketFactory;
