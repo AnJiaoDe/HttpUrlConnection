@@ -22,6 +22,7 @@ public class Request {
             this.method = "GET";
 
         }
+
         public Builder url(String url) {
             this.url = url;
             return this;

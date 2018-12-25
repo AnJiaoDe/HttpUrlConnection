@@ -1,4 +1,4 @@
-package com.cy.sdkstrategy_master.http;
+package com.cy.sdkstrategy_master.http.utils;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;

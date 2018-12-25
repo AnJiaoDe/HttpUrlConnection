@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.cy.sdkstrategy_master.http;
+package com.cy.sdkstrategy_master.http.utils;
 
 import java.security.cert.X509Certificate;
 

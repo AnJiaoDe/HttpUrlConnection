@@ -33,16 +33,13 @@ public abstract class BaseRequest<T extends BaseRequest> {
 
     public void enqueue(Callback callback) {
         this.callback = callback;
-//        if (callback instanceof StringCallback){
-
-            new CallImpl(generateRequest()).enqueue(callback);
-//        }
+        new CallImpl(generateRequest()).enqueue(callback);
 
     }
 
     /**
-        * 根据不同的请求方式，
-        */
+     * 根据不同的请求方式，
+     */
     public abstract Request generateRequest();
 
 

@@ -1,35 +1,17 @@
-package com.cy.sdkstrategy_master.http;//package com.cy.sdkstrategy_master.http;
+package com.cy.sdkstrategy_master.http.utils;//package com.cy.sdkstrategy_master.http;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
 
 /**
  * Created by lenovo on 2017/12/24.
  */
 
 public class BitmapUtils {
-    public static byte[] toByteArray(InputStream input) {
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
-        byte[] buffer = new byte[1];
-        int len = 0;
-        try {
-            while ((len = input.read(buffer)) != -1) {
-                output.write(buffer, 0, len);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return output.toByteArray();
-    }
 
     //可以直接将网络连接得到的输入流压缩为bitmpa
     public static Bitmap decodeBitmapFromBytes(byte[] data, int reqWidth, int reqHeight) {
-
 
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inJustDecodeBounds = true;
