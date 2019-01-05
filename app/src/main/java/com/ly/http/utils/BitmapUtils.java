@@ -45,7 +45,7 @@ public class BitmapUtils {
 
     }
 /*
-     * 由file转bitmap
+     * 由file转bitmap,压缩
 	 */
 
     public static Bitmap decodeBitmapFromPath(String path, int reqWidth, int reqHeight) {

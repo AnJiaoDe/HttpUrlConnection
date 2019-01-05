@@ -120,82 +120,58 @@ public class CallWaitImpl<T> implements Call<T> {
                 } else if (callback instanceof BitmapCallbackImpl) {
                     final BitmapCallbackImpl bitmapCallback = (BitmapCallbackImpl) callback;
 
-                    if (bitmapCallback.getCachePath() != null) {
 
-                        ioUtils.read2File(bitmapCallback.getCachePath(), httpURLConnection.getContentLength(), inputStream, new IOListener<File>() {
-                            @Override
-                            public void onCompleted(File result) {
-                                Bitmap bitmap = BitmapUtils.decodeBitmapFromPath(
-                                        result.getPath(), bitmapCallback.getReqWidth(), bitmapCallback.getReqHeight());
-                                if (bitmap != null && bitmap.getWidth() > 0) {
-                                    callSuccess(bitmap);
-
-                                } else {
-                                    callback.onFail("图片下载失败");
-
-                                }
-                            }
-
-                            @Override
-                            public void onLoding(long current, long length) {
-                                callback.onLoding(current, length);
+                    ioUtils.read2ByteArray(httpURLConnection.getContentLength(), inputStream, new IOListener<byte[]>() {
+                        @Override
+                        public void onCompleted(final byte[] result) {
 
 
-                            }
+                            Bitmap bitmap = BitmapUtils.decodeBitmapFromBytes(result, bitmapCallback.getReqWidth(), bitmapCallback.getReqHeight());
+                            if (bitmap != null && bitmap.getWidth() > 0) {
+                                if (bitmapCallback.getCachePath() != null) {
+                                    File file = new File(((BitmapCallbackImpl) callback).getCachePath());
+                                    if (file != null) {
+                                        BitmapUtils.saveBitmapToFile(bitmap, file);
+                                        callSuccess(bitmap);
 
-                            @Override
-                            public void onInterrupted() {
-                                callback.onFail("网络请求失败，线程被取消");
+                                        return;
 
-
-                            }
-
-                            @Override
-                            public void onFail(String errorMsg) {
-                                callback.onFail(errorMsg);
-
-                            }
-                        });
-                    } else {
-                        ioUtils.read2ByteArray(httpURLConnection.getContentLength(), inputStream, new IOListener<byte[]>() {
-                            @Override
-                            public void onCompleted(final byte[] result) {
-
-                                Bitmap bitmap = BitmapUtils.decodeBitmapFromBytes(result, bitmapCallback.getReqWidth(),
-                                        bitmapCallback.getReqHeight());
-
-                                if (bitmap != null && bitmap.getWidth() > 0) {
-                                    callSuccess(bitmap);
-                                } else {
-                                    callback.onFail("图片下载失败");
+                                    }
+                                    callback.onFail("图片下载成功，但缓存失败");
 
                                 }
+                                callSuccess(bitmap);
 
 
-                            }
-
-                            @Override
-                            public void onLoding(long current, long length) {
-
-                                callback.onLoding(current, length);
-
+                            } else {
+                                callback.onFail("图片下载失败");
 
                             }
 
-                            @Override
-                            public void onInterrupted() {
-                                callback.onFail("网络请求失败，线程被取消");
+
+                        }
+
+                        @Override
+                        public void onLoding(long current, long length) {
+
+                            callback.onLoding(current, length);
 
 
-                            }
+                        }
 
-                            @Override
-                            public void onFail(String errorMsg) {
-                                callback.onFail(errorMsg);
+                        @Override
+                        public void onInterrupted() {
+                            callback.onFail("网络请求失败，线程被取消");
 
-                            }
-                        });
-                    }
+
+                        }
+
+                        @Override
+                        public void onFail(String errorMsg) {
+                            callback.onFail(errorMsg);
+
+                        }
+                    });
                 }
 
 

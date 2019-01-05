@@ -1,5 +1,8 @@
 package com.ly.http;//package com.cy.sdkstrategy_master.http;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+
 /**
  * Created by Administrator on 2018/12/21 0021.
  */
@@ -44,6 +47,13 @@ public abstract class BaseRequestGenerator<T extends BaseRequestGenerator> {
      */
     public void enqueue(Callback callback) {
         if (callback==null)return;
+        if (callback instanceof BitmapCallbackImpl){
+            Bitmap bitmap=BitmapFactory.decodeFile(((BitmapCallbackImpl) callback).getCachePath());
+            if (bitmap!=null&&bitmap.getWidth()>0) {
+                callback.onSuccess(bitmap);
+                return;
+            }
+        }
         Call call = new CallEnqueueImpl(generateRequest(tag));
         HttpUtils.getInstance().addCall(call);
         call.enqueue(callback);

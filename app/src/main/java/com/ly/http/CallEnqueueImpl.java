@@ -71,7 +71,6 @@ public class CallEnqueueImpl<T> implements Call<T> {
     private class CallThread extends Thread {
 
 
-
         @Override
 
         public void run() {
@@ -113,88 +112,63 @@ public class CallEnqueueImpl<T> implements Call<T> {
 
                             @Override
                             public void onInterrupted() {
-                                callFail(callback,  "线程被取消");
+                                callFail(callback, "线程被取消");
                             }
 
                             @Override
                             public void onFail(String errorMsg) {
 
-                                callFail(callback,errorMsg);
+                                callFail(callback, errorMsg);
                             }
                         });
                     } else if (callback instanceof BitmapCallbackImpl) {
 
                         final BitmapCallbackImpl bitmapCallback = (BitmapCallbackImpl) callback;
 
-                        if (bitmapCallback.getCachePath()!=null){
 
-                            ioUtils.read2File(bitmapCallback.getCachePath(),httpURLConnection.getContentLength(), inputStream, new IOListener<File>() {
-                                @Override
-                                public void onCompleted(File result) {
-                                    Bitmap bitmap=BitmapUtils.decodeBitmapFromPath(
-                                            result.getPath(),bitmapCallback.getReqWidth(),bitmapCallback.getReqHeight());
-                                    if (bitmap != null && bitmap.getWidth() > 0) {
-                                        callSuccess(callback, bitmap);
-                                    } else {
-                                        callFail(callback,  "图片下载失败");
+                        ioUtils.read2ByteArray(httpURLConnection.getContentLength(), inputStream, new IOListener<byte[]>() {
+                            @Override
+                            public void onCompleted(byte[] result) {
+
+                                Bitmap bitmap = BitmapUtils.decodeBitmapFromBytes(result, bitmapCallback.getReqWidth(), bitmapCallback.getReqHeight());
+                                if (bitmap != null && bitmap.getWidth() > 0) {
+                                    if (bitmapCallback.getCachePath() != null) {
+                                        File file = new File(((BitmapCallbackImpl) callback).getCachePath());
+                                        if (file != null) {
+                                            BitmapUtils.saveBitmapToFile(bitmap, file);
+                                            callSuccess(callback, bitmap);
+                                            return;
+
+                                        }
+                                        callFail(callback, "图片下载成功，但缓存失败");
+
                                     }
+                                    callSuccess(callback, bitmap);
+
+                                } else {
+                                    callFail(callback, "图片下载失败");
                                 }
+                            }
 
-                                @Override
-                                public void onLoding(long current, long length) {
-                                    callOnLoding(callback, current, length);
 
-                                }
+                            @Override
+                            public void onLoding(long current, long length) {
+                                callOnLoding(callback, current, length);
 
-                                @Override
-                                public void onInterrupted() {
-                                    callFail(callback,  "网络请求失败，线程被取消");
+                            }
 
-                                }
+                            @Override
+                            public void onInterrupted() {
+                                callFail(callback, "网络请求失败，线程被取消");
 
-                                @Override
-                                public void onFail(String errorMsg) {
-                                    callFail(callback,errorMsg);
+                            }
 
-                                }
-                            });
-                        }else {
+                            @Override
+                            public void onFail(String errorMsg) {
+                                callFail(callback, errorMsg);
 
-                            ioUtils.read2ByteArray(httpURLConnection.getContentLength(), inputStream, new IOListener<byte[]>() {
-                                @Override
-                                public void onCompleted(final byte[] result) {
-
-                                    Bitmap bitmap = BitmapUtils.decodeBitmapFromBytes(result, bitmapCallback.getReqWidth(),
-                                            bitmapCallback.getReqHeight());
-
-                                    if (bitmap != null && bitmap.getWidth() > 0) {
-                                        callSuccess(callback, bitmap);
-                                    } else {
-                                        callFail(callback,  "图片下载失败");
-                                    }
-
-                                }
-
-                                @Override
-                                public void onLoding(long current, long length) {
-
-                                    callOnLoding(callback, current, length);
-
-                                }
-
-                                @Override
-                                public void onInterrupted() {
-                                    callFail(callback, "网络请求失败，线程被取消");
-                                }
-
-                                @Override
-                                public void onFail(String errorMsg) {
-                                    callFail(callback,errorMsg);
-
-                                }
-                            });
-                        }
-
+                            }
+                        });
                     }
 
 
@@ -203,7 +177,7 @@ public class CallEnqueueImpl<T> implements Call<T> {
                 }
             } catch (MalformedURLException e) {
                 e.printStackTrace();
-                callFail(callback, "网络请求失败，"+e.getMessage());
+                callFail(callback, "网络请求失败，" + e.getMessage());
 
             } catch (ProtocolException e) {
 
@@ -213,18 +187,18 @@ public class CallEnqueueImpl<T> implements Call<T> {
                     methodField.set(httpURLConnection, request.getMethod());
                 } catch (NoSuchFieldException e1) {
                     e1.printStackTrace();
-                    callFail(callback,  "网络请求失败，"+e1.getMessage());
+                    callFail(callback, "网络请求失败，" + e1.getMessage());
 
                 } catch (IllegalAccessException e2) {
                     e2.printStackTrace();
-                    callFail(callback, "网络请求失败，"+e2.getMessage());
+                    callFail(callback, "网络请求失败，" + e2.getMessage());
 
                 }
 
             } catch (IOException e) {
                 e.printStackTrace();
 
-                callFail(callback, "网络请求失败，"+e.getMessage());
+                callFail(callback, "网络请求失败，" + e.getMessage());
 
             } finally {
                 if (httpURLConnection != null) {
@@ -235,6 +209,7 @@ public class CallEnqueueImpl<T> implements Call<T> {
                 HttpUtils.getInstance().removeCall(CallEnqueueImpl.this);
             }
         }
+
     }
 
     protected void callSuccess(final Callback callback, final Object response) {
@@ -257,11 +232,11 @@ public class CallEnqueueImpl<T> implements Call<T> {
         });
     }
 
-    protected void callFail(final Callback callback,  final String ErrorMsg) {
+    protected void callFail(final Callback callback, final String ErrorMsg) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                callback.onFail( ErrorMsg);
+                callback.onFail(ErrorMsg);
 
             }
         });

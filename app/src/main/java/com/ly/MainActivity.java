@@ -67,7 +67,7 @@ public class MainActivity extends AppCompatActivity {
 //
 //                    }
 //                });
-
+//
 //        HttpUtils.getInstance().get("http://img.zcool.cn/community/01b354556828fc0000012b20429d5e.jpg")
 //                .tag(1)
 //                .enqueue(new BitmapCallbackImpl(800, 800) {
