@@ -2,15 +2,13 @@ package com.ly.http;
 
 import android.graphics.Bitmap;
 
-import java.io.File;
-
 /**
  * Created by Administrator on 2018/12/25 0025.
  */
 
 public abstract class BitmapCallbackImpl extends Callback<Bitmap> {
 
-    private File fileCache;
+    private String cachePath;
 
     private int reqWidth, reqHeight;
 
@@ -19,18 +17,18 @@ public abstract class BitmapCallbackImpl extends Callback<Bitmap> {
         this.reqHeight = reqHeight;
     }
 
-    public BitmapCallbackImpl(File fileCache, int reqWidth, int reqHeight) {
-        this.fileCache = fileCache;
+    public BitmapCallbackImpl(String cachePath, int reqWidth, int reqHeight) {
+        this.cachePath = cachePath;
         this.reqWidth = reqWidth;
         this.reqHeight = reqHeight;
     }
 
-    public File getFileCache() {
-        return fileCache;
+    public String getCachePath() {
+        return cachePath;
     }
 
-    public void setFileCache(File fileCache) {
-        this.fileCache = fileCache;
+    public void setCachePath(String cachePath) {
+        this.cachePath = cachePath;
     }
 
     public int getReqWidth() {

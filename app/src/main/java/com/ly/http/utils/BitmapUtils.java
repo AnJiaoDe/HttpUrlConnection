@@ -14,13 +14,13 @@ import java.io.IOException;
  */
 
 public class BitmapUtils {
-
     //可以直接将网络连接得到的输入流压缩为bitmpa
     public static Bitmap decodeBitmapFromBytes(byte[] data, int reqWidth, int reqHeight) {
 
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inJustDecodeBounds = true;
         BitmapFactory.decodeByteArray(data, 0, data.length, options);
+
         options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
         options.inJustDecodeBounds = false;
         return BitmapFactory.decodeByteArray(data, 0, data.length, options);
@@ -44,7 +44,26 @@ public class BitmapUtils {
         return file;
 
     }
+/*
+     * 由file转bitmap
+	 */
 
+    public static Bitmap decodeBitmapFromPath(String path, int reqWidth, int reqHeight) {
+
+        // First decode with inJustDecodeBounds=true to check dimensions
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inJustDecodeBounds = true;
+        BitmapFactory.decodeFile(path, options);
+
+        // Calculate inSampleSize
+        options.inSampleSize = calculateInSampleSize(options, reqWidth,
+                reqHeight);
+
+        // Decode bitmap with inSampleSize set
+        options.inJustDecodeBounds = false;
+
+        return BitmapFactory.decodeFile(path, options);
+    }
     /*
          * 计算采样率
          */

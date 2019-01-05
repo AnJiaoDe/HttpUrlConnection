@@ -10,22 +10,12 @@ package com.ly.http;
  */
 
 public class ResponseBody<T> {
-    protected int errorCode = 0;
     protected String errorMsg = "";
     protected T body;
 
-    public ResponseBody(int errorCode, String errorMsg, T body) {
-        this.errorCode = errorCode;
+    public ResponseBody(String errorMsg, T body) {
         this.errorMsg = errorMsg;
         this.body = body;
-    }
-
-    public int getErrorCode() {
-        return errorCode;
-    }
-
-    public void setErrorCode(int errorCode) {
-        this.errorCode = errorCode;
     }
 
     public String getErrorMsg() {

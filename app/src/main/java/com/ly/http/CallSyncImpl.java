@@ -1,11 +1,14 @@
 package com.ly.http;
 
 
+import android.graphics.Bitmap;
+
 import com.ly.http.utils.BitmapUtils;
 import com.ly.http.utils.IOListener;
 import com.ly.http.utils.IOUtils;
 import com.ly.http.utils.SSLUtils;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
@@ -75,12 +78,12 @@ public class CallSyncImpl<T> implements Call<T> {
         } catch (ExecutionException e) {
             e.printStackTrace();
         }
-        if (syncResponseBody.getErrorCode() == HttpResponseCode.CODE_SUCCESS) {
+        if (syncResponseBody.getErrorMsg().equals("请求成功")) {
 
             callback.onSuccess(syncResponseBody.getBody());
         } else {
 
-            callback.onFail(syncResponseBody.getErrorCode(), syncResponseBody.getErrorMsg());
+            callback.onFail(syncResponseBody.getErrorMsg());
         }
 
     }
@@ -89,8 +92,8 @@ public class CallSyncImpl<T> implements Call<T> {
 
         @Override
         public ResponseBody<T> call() {
-
             HttpURLConnection httpURLConnection = null;
+
             InputStream inputStream = null;
             try {
                 URL url = new URL(request.getUrl());
@@ -111,44 +114,121 @@ public class CallSyncImpl<T> implements Call<T> {
                     if (callback instanceof StringCallbackImpl) {
 
 
-                        ioUtils.read2String(inputStream, "UTF-8", new IOListener<String>() {
+                        ioUtils.read2String(httpURLConnection.getContentLength(), inputStream, new IOListener<String>() {
                             @Override
                             public void onCompleted(final String str) {
-                                syncResponseBody = new ResponseBody(HttpResponseCode.CODE_SUCCESS, "请求成功", str);
+                                syncResponseBody = new ResponseBody("请求成功", str);
+                            }
+
+                            @Override
+                            public void onLoding(long current, long length) {
+                                callback.onLoding(current, length);
                             }
 
                             @Override
                             public void onInterrupted() {
-                                syncResponseBody = new ResponseBody(HttpResponseCode.CODE_THREAD_CANCEL, "线程被取消", "");
+                                syncResponseBody = new ResponseBody("网络请求失败，线程被取消", "");
+
+                            }
+
+                            @Override
+                            public void onFail(String errorMsg) {
+                                syncResponseBody = new ResponseBody(errorMsg, "");
 
                             }
                         });
                     } else if (callback instanceof BitmapCallbackImpl) {
-                        ioUtils.read2ByteArray(inputStream, new IOListener<byte[]>() {
-                            @Override
-                            public void onCompleted(final byte[] result) {
-                                syncResponseBody = new ResponseBody(HttpResponseCode.CODE_SUCCESS, "请求成功", BitmapUtils.decodeBitmapFromBytes(
-                                        result, ((BitmapCallbackImpl) callback).getReqWidth(),
-                                        ((BitmapCallbackImpl) callback).getReqHeight()));
+                        final BitmapCallbackImpl bitmapCallback = (BitmapCallbackImpl) callback;
 
-                            }
+                        if (bitmapCallback.getCachePath() != null) {
 
-                            @Override
-                            public void onInterrupted() {
-                                syncResponseBody = new ResponseBody(HttpResponseCode.CODE_THREAD_CANCEL, "线程被取消", "");
+                            ioUtils.read2File(bitmapCallback.getCachePath(), httpURLConnection.getContentLength(), inputStream, new IOListener<File>() {
+                                @Override
+                                public void onCompleted(File result) {
 
-                            }
-                        });
+                                    Bitmap bitmap = BitmapUtils.decodeBitmapFromPath(
+                                            result.getPath(), bitmapCallback.getReqWidth(),
+                                            bitmapCallback.getReqHeight());
+                                    if (bitmap != null && bitmap.getWidth() > 0) {
+                                        syncResponseBody = new ResponseBody("请求成功", bitmap);
+
+                                    } else {
+                                        syncResponseBody = new ResponseBody("图片下载失败", bitmap);
+
+                                    }
+                                }
+
+                                @Override
+                                public void onLoding(long current, long length) {
+                                    callback.onLoding(current, length);
+
+
+                                }
+
+                                @Override
+                                public void onInterrupted() {
+                                    syncResponseBody = new ResponseBody("网络请求失败，线程被取消", "");
+
+
+                                }
+
+                                @Override
+                                public void onFail(String errorMsg) {
+                                    syncResponseBody = new ResponseBody(errorMsg, "");
+
+                                }
+                            });
+                        } else {
+                            ioUtils.read2ByteArray(httpURLConnection.getContentLength(), inputStream, new IOListener<byte[]>() {
+                                @Override
+                                public void onCompleted(final byte[] result) {
+
+                                    Bitmap bitmap = BitmapUtils.decodeBitmapFromBytes(
+                                            result, bitmapCallback.getReqWidth(),
+                                            bitmapCallback.getReqHeight());
+                                    if (bitmap != null && bitmap.getWidth() > 0) {
+                                        syncResponseBody = new ResponseBody("请求成功", bitmap);
+
+                                    } else {
+                                        syncResponseBody = new ResponseBody("图片下载失败", bitmap);
+
+                                    }
+
+
+                                }
+
+                                @Override
+                                public void onLoding(long current, long length) {
+
+                                    callback.onLoding(current, length);
+
+
+                                }
+
+                                @Override
+                                public void onInterrupted() {
+                                    syncResponseBody = new ResponseBody("网络请求失败，线程被取消", "");
+
+                                }
+
+                                @Override
+                                public void onFail(String errorMsg) {
+                                    syncResponseBody = new ResponseBody(errorMsg, "");
+
+                                }
+                            });
+                        }
+
                     }
 
 
                 } else {
-                    syncResponseBody = new ResponseBody(httpURLConnection.getResponseCode(), httpURLConnection.getResponseMessage(), "");
+                    syncResponseBody = new ResponseBody(httpURLConnection.getResponseMessage(), "");
 
                 }
             } catch (MalformedURLException e) {
                 e.printStackTrace();
-                syncResponseBody = new ResponseBody(HttpResponseCode.CODE_URL_INVALID, "URL不合法", "");
+                syncResponseBody = new ResponseBody("网络请求失败,"+e.getMessage(), "");
 
 
             } catch (ProtocolException e) {
@@ -158,17 +238,17 @@ public class CallSyncImpl<T> implements Call<T> {
                     methodField.set(httpURLConnection, request.getMethod());
                 } catch (NoSuchFieldException e1) {
                     e1.printStackTrace();
+                    syncResponseBody = new ResponseBody("网络请求失败," +e1.getMessage(), "");
+
                 } catch (IllegalAccessException e1) {
                     e1.printStackTrace();
-                } finally {
-                    syncResponseBody = new ResponseBody(HttpResponseCode.CODE_PROTOCOL, "网络请求协议不合法", "");
-
+                    syncResponseBody = new ResponseBody("网络请求失败," +e1.getMessage(), "");
                 }
 
             } catch (IOException e) {
                 e.printStackTrace();
 
-                syncResponseBody = new ResponseBody(HttpResponseCode.CODE_IO_FAILED, "网络请求失败,请检查网络", "");
+                syncResponseBody = new ResponseBody("网络请求失败," + e.getMessage(), "");
 
 
             } finally {

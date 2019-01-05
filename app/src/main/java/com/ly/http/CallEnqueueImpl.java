@@ -8,6 +8,7 @@ import com.ly.http.utils.IOListener;
 import com.ly.http.utils.IOUtils;
 import com.ly.http.utils.SSLUtils;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
@@ -69,6 +70,8 @@ public class CallEnqueueImpl<T> implements Call<T> {
 
     private class CallThread extends Thread {
 
+
+
         @Override
 
         public void run() {
@@ -80,59 +83,127 @@ public class CallEnqueueImpl<T> implements Call<T> {
                 httpURLConnection = (HttpURLConnection) url.openConnection();
                 SSLUtils.trustAllSSL(httpURLConnection);
 
-                //设置出入可用
-                httpURLConnection.setDoInput(true);
-                // 设置输出可用
-//                httpURLConnection.setDoOutput(true);
+
                 // 设置请求方式
                 httpURLConnection.setRequestMethod(request.getMethod());
-
+                //设置出入可用
+//                httpURLConnection.setDoInput(true);
+                // 设置输出可用
+//                httpURLConnection.setDoOutput(true);
                 // 开始连接
-                httpURLConnection.connect();
+//                httpURLConnection.connect();
+                inputStream = httpURLConnection.getInputStream();
+//                OutputStream outputStream = httpURLConnection.getInputStream();
                 if (httpURLConnection.getResponseCode() == 200) {
-                    inputStream = httpURLConnection.getInputStream();
 
 
                     if (callback instanceof StringCallbackImpl) {
 
 
-                        ioUtils.read2String(inputStream, "UTF-8", new IOListener<String>() {
+                        ioUtils.read2String(httpURLConnection.getContentLength(), inputStream, new IOListener<String>() {
                             @Override
                             public void onCompleted(final String str) {
-                                callSuccess(str);
+                                callSuccess(callback, str);
+                            }
+
+                            @Override
+                            public void onLoding(long current, long length) {
+                                callOnLoding(callback, current, length);
                             }
 
                             @Override
                             public void onInterrupted() {
-                                callFail(HttpResponseCode.CODE_THREAD_CANCEL, "线程被取消");
+                                callFail(callback,  "线程被取消");
+                            }
+
+                            @Override
+                            public void onFail(String errorMsg) {
+
+                                callFail(callback,errorMsg);
                             }
                         });
                     } else if (callback instanceof BitmapCallbackImpl) {
-                        ioUtils.read2ByteArray(inputStream, new IOListener<byte[]>() {
-                            @Override
-                            public void onCompleted(final byte[] result) {
 
-                                Bitmap bitmap= BitmapUtils.decodeBitmapFromBytes(
-                                        result, ((BitmapCallbackImpl) callback).getReqWidth(),
-                                        ((BitmapCallbackImpl) callback).getReqHeight());
-                                if (((BitmapCallbackImpl) callback).isCache())
-                                BitmapUtils.
-                            }
+                        final BitmapCallbackImpl bitmapCallback = (BitmapCallbackImpl) callback;
 
-                            @Override
-                            public void onInterrupted() {
-                                callFail(HttpResponseCode.CODE_THREAD_CANCEL, "线程被取消");
-                            }
-                        });
+                        if (bitmapCallback.getCachePath()!=null){
+
+                            ioUtils.read2File(bitmapCallback.getCachePath(),httpURLConnection.getContentLength(), inputStream, new IOListener<File>() {
+                                @Override
+                                public void onCompleted(File result) {
+                                    Bitmap bitmap=BitmapUtils.decodeBitmapFromPath(
+                                            result.getPath(),bitmapCallback.getReqWidth(),bitmapCallback.getReqHeight());
+                                    if (bitmap != null && bitmap.getWidth() > 0) {
+                                        callSuccess(callback, bitmap);
+                                    } else {
+                                        callFail(callback,  "图片下载失败");
+                                    }
+                                }
+
+                                @Override
+                                public void onLoding(long current, long length) {
+                                    callOnLoding(callback, current, length);
+
+                                }
+
+                                @Override
+                                public void onInterrupted() {
+                                    callFail(callback,  "网络请求失败，线程被取消");
+
+                                }
+
+                                @Override
+                                public void onFail(String errorMsg) {
+                                    callFail(callback,errorMsg);
+
+                                }
+                            });
+                        }else {
+
+                            ioUtils.read2ByteArray(httpURLConnection.getContentLength(), inputStream, new IOListener<byte[]>() {
+                                @Override
+                                public void onCompleted(final byte[] result) {
+
+                                    Bitmap bitmap = BitmapUtils.decodeBitmapFromBytes(result, bitmapCallback.getReqWidth(),
+                                            bitmapCallback.getReqHeight());
+
+                                    if (bitmap != null && bitmap.getWidth() > 0) {
+                                        callSuccess(callback, bitmap);
+                                    } else {
+                                        callFail(callback,  "图片下载失败");
+                                    }
+
+                                }
+
+                                @Override
+                                public void onLoding(long current, long length) {
+
+                                    callOnLoding(callback, current, length);
+
+                                }
+
+                                @Override
+                                public void onInterrupted() {
+                                    callFail(callback, "网络请求失败，线程被取消");
+                                }
+
+                                @Override
+                                public void onFail(String errorMsg) {
+                                    callFail(callback,errorMsg);
+
+                                }
+                            });
+                        }
+
                     }
 
 
                 } else {
-                    callFail(httpURLConnection.getResponseCode(), httpURLConnection.getResponseMessage());
+                    callFail(callback, httpURLConnection.getResponseMessage());
                 }
             } catch (MalformedURLException e) {
                 e.printStackTrace();
-                callFail(HttpResponseCode.CODE_URL_INVALID, "URL不合法");
+                callFail(callback, "网络请求失败，"+e.getMessage());
 
             } catch (ProtocolException e) {
 
@@ -142,16 +213,18 @@ public class CallEnqueueImpl<T> implements Call<T> {
                     methodField.set(httpURLConnection, request.getMethod());
                 } catch (NoSuchFieldException e1) {
                     e1.printStackTrace();
-                } catch (IllegalAccessException e1) {
-                    e1.printStackTrace();
-                } finally {
-                    callFail(HttpResponseCode.CODE_PROTOCOL, "网络请求协议不合法");
+                    callFail(callback,  "网络请求失败，"+e1.getMessage());
+
+                } catch (IllegalAccessException e2) {
+                    e2.printStackTrace();
+                    callFail(callback, "网络请求失败，"+e2.getMessage());
+
                 }
 
             } catch (IOException e) {
                 e.printStackTrace();
 
-                callFail(HttpResponseCode.CODE_IO_FAILED, "网络请求失败,请检查网络");
+                callFail(callback, "网络请求失败，"+e.getMessage());
 
             } finally {
                 if (httpURLConnection != null) {
@@ -164,7 +237,7 @@ public class CallEnqueueImpl<T> implements Call<T> {
         }
     }
 
-    protected void callSuccess(final Object response) {
+    protected void callSuccess(final Callback callback, final Object response) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -174,11 +247,21 @@ public class CallEnqueueImpl<T> implements Call<T> {
         });
     }
 
-    protected void callFail(final int ErrorCode, final String ErrorMsg) {
+    protected void callOnLoding(final Callback callback, final long current, final long length) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                callback.onFail(ErrorCode, ErrorMsg);
+                callback.onLoding(current, length);
+
+            }
+        });
+    }
+
+    protected void callFail(final Callback callback,  final String ErrorMsg) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                callback.onFail( ErrorMsg);
 
             }
         });

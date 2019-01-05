@@ -68,7 +68,13 @@ public class SecondActivity extends AppCompatActivity {
                         }
 
                         @Override
-                        public void onFail(int code, String msg) {
+                        public void onLoding(long current, long length) {
+                            LogUtils.log("进度",current*1f/length);
+
+                        }
+
+                        @Override
+                        public void onFail( String msg) {
 
                             LogUtils.log("APKcode", msg);
 

@@ -9,14 +9,19 @@ public abstract class Callback<T> {
 
 
     /**
-     * 对返回数据进行操作的回调，UI线程
+     * 对返回数据进行操作的回调，使用enqueue异步请求时，是UI线程
      */
     public abstract void onSuccess(T response);
+    /**
+     * 进度，使用enqueue异步请求时，是UI线程
+     */
+    public abstract void onLoding(long current, long length);
+
 
     /**
-     * 请求失败，响应错误等，都会回调该方法，UI线程
+     * 请求失败，响应错误等，都会回调该方法，使用enqueue异步请求时，是UI线程
      */
-    public abstract void onFail(int errorCode, String errorMsg);
+    public abstract void onFail( String errorMsg);
 
 
 }

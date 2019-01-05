@@ -6,6 +6,7 @@ package com.ly.http.utils;
 
 public interface IOListener<T> {
     public void onCompleted(T result);
-    public void onLoding(int current, int length);
+    public void onLoding(long current, long length);
     public void onInterrupted();
+    public void onFail(String errorMsg);
 }
